@@ -26,10 +26,13 @@ def parse_location(location: str) -> tuple:
 work_html = requests.get("https://dom.ria.com/uk/arenda-kvartir/lvov/?page=1").text
 
 soup = BeautifulSoup(work_html, features="html5lib")
+print(soup)
 
+print(isinstance(soup, BeautifulSoup))
 catalog = soup.find_all("section", attrs={"class": re.compile("ticket-clear line.+$")})[0]
 
-#print(catalog)
+print(catalog)
+print(type(catalog))
 
 
 img = catalog.find("img")["src"]

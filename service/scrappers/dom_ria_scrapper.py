@@ -1,3 +1,12 @@
+"""dom_ria_scrapper module for defining class for scrapping domria resource.
+
+Imports:
+BaseScrapper (class): base class for all scrappers,
+bs4.Element.Tag/ResultSet (class): Elements for showing user a type of scrapped element,
+collections.namedtuple (callable): for creating tuples with keys,
+re (module): regular expressions for filtering scrapped data.
+
+"""
 from service.scrappers.base_scrapper import BaseScrapper, BeautifulSoup
 from bs4.element import Tag, ResultSet
 from collections import namedtuple
@@ -9,6 +18,15 @@ from constants import MAXIMUM_AMOUNT_OF_PAGES_FOR_SCRAPPING
 
 class DomRiaScrapper(BaseScrapper):
     """A class for scrapping domria resource
+
+        Attributes:
+            catalog_class (str): html class of domria catalog.
+            realty_inner_link_class (str): html class of domria listing link.
+            location_info_class (str): html class of domria location information.
+            house_price_class (str): html class of domria price information.
+            inner_meta_feature_class (str): html class of domria listing features.
+            inner_meta_feature_value_class (str): html class of domria listing features values.
+
     """
 
     def __init__(self, url: str = "https://dom.ria.com/uk/arenda-kvartir/lvov/?page=1",
@@ -27,11 +45,36 @@ class DomRiaScrapper(BaseScrapper):
         meta_titles = [el.text.strip() for el in list(meta_keys)]
         meta_values = [el.text.strip() for el in list(meta_values)]
 
-    def parse_url(self, url, base="https://dom.ria.com"):
+    def parse_url(self, url: str, base: str = "https://dom.ria.com") -> str:
+        """Method for parsing and returning correct url.
+
+            Args:
+                url (str): scrapped url,
+                base (str): base of url.
+
+            Returns:
+                str - correct url for future scrapping.
+
+            Raises:
+                TypeError: if url or base is not a string.
+
+        """
         base_url = url.replace("/ru/", "/uk/")
         return base + base_url
 
     def parse_price(self, scrapped_price: str) -> int:
+        """Method for parsing and returning correct price.
+
+            Args:
+                scrapped_price (str): scrapped listing price.
+
+            Returns:
+                int - correct price.
+
+            Raises:
+                TypeError: if scrapped_price is not a string.
+
+        """
         scrapped_price = scrapped_price.replace(" ", "")
         price_end_index = scrapped_price.find("грн")
 
@@ -39,6 +82,18 @@ class DomRiaScrapper(BaseScrapper):
         return int(scrapped_price)
 
     def parse_location(self, location: str) -> tuple:
+        """Method for parsing and returning correct listing location.
+
+            Args:
+                location (str): scrapped listing location.
+
+            Returns:
+                namedtuple - namedtuple object consist of listing district and street.
+
+            Raises:
+                TypeError: if location is not a string.
+
+        """
         street_index = location.find("вул.")
         city_index = location.find("м.")
 
@@ -61,6 +116,7 @@ class DomRiaScrapper(BaseScrapper):
 
             Raises:
                 TypeError: if scrapped_data isn't a Tag object.
+                ValueError: if scrapping of some part of source gone wrong.
 
         """
         result = {}
@@ -90,7 +146,6 @@ class DomRiaScrapper(BaseScrapper):
 
         result["price"] = listing_price
         result["img"] = img_src
-        print(listing_location)
         result["district"], result["street"] = listing_location.district, listing_location.street
         result["meta"] = structured_meta
 
@@ -98,13 +153,31 @@ class DomRiaScrapper(BaseScrapper):
 
 
     def paginate_page(self, current_page_url: str) -> str:
+        """Method for changing current page of source to next.
+
+            Args:
+                current_page_url (str): current page of scrapping.
+
+            Returns:
+                str: url of next page for scrapping.
+
+            Raises:
+                TypeError: if current_page_url is not a string.
+
+        """
         page_index = current_page_url.find("=") + 1
         current_page_number = current_page_url[page_index:]
 
         return current_page_url.replace(current_page_number, str(int(current_page_number) + 1))
 
 
-    def general_scrapp(self):
+    def general_scrapp(self) -> list:
+        """Initial method for scrapping source.
+
+            Returns:
+                list: scrapped and well formatted listings.
+
+        """
         resulted_listings = []
         domria_url = self._source_url
 
@@ -130,16 +203,5 @@ class DomRiaScrapper(BaseScrapper):
             print("No more pages left.")
             return resulted_listings
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         super().__repr__()
-
-
-if __name__ == "__main__":
-    domria_scrapper = DomRiaScrapper()
-
-    print("start")
-    listings = domria_scrapper.general_scrapp()
-
-    print(listings)
-

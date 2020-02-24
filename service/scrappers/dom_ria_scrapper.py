@@ -41,9 +41,24 @@ class DomRiaScrapper(BaseScrapper):
         self.inner_meta_feature_value_class = "indent"
 
     def parse_meta(self, meta_keys: ResultSet, meta_values: ResultSet) -> dict:
+        """Method for parsing and returning structured meta information about listing.
 
+            Args:
+                meta_keys (ResultSet): listing features names.
+                meta_values (ResultSet): listing features values.
+
+            Returns:
+                dict: structured kv-pairs of listing features.
+
+            Raises:
+                TypeError: rather meta_keys or meta_values are not iterable(ResultSet) objects.
+
+        """
         meta_titles = [el.text.strip() for el in list(meta_keys)]
         meta_values = [el.text.strip() for el in list(meta_values)]
+
+        structured_meta = dict(zip(meta_titles, meta_values))
+        return structured_meta
 
     def parse_url(self, url: str, base: str = "https://dom.ria.com") -> str:
         """Method for parsing and returning correct url.
@@ -53,7 +68,7 @@ class DomRiaScrapper(BaseScrapper):
                 base (str): base of url.
 
             Returns:
-                str - correct url for future scrapping.
+                str: correct url for future scrapping.
 
             Raises:
                 TypeError: if url or base is not a string.
@@ -69,7 +84,7 @@ class DomRiaScrapper(BaseScrapper):
                 scrapped_price (str): scrapped listing price.
 
             Returns:
-                int - correct price.
+                int: correct price.
 
             Raises:
                 TypeError: if scrapped_price is not a string.
@@ -88,7 +103,7 @@ class DomRiaScrapper(BaseScrapper):
                 location (str): scrapped listing location.
 
             Returns:
-                namedtuple - namedtuple object consist of listing district and street.
+                namedtuple: namedtuple object consist of listing district and street.
 
             Raises:
                 TypeError: if location is not a string.
@@ -144,7 +159,7 @@ class DomRiaScrapper(BaseScrapper):
         result["img"] = img_src
         result["district"] = listing_location.district
         result["street"] = listing_location.street
-        result["meta"] = structured_meta
+        result.update(structured_meta)
 
         return result
 
@@ -194,6 +209,8 @@ class DomRiaScrapper(BaseScrapper):
                 except ValueError as err:
                     print(err)
                     continue
+                except KeyError as err:
+                    print("got wrong keys: ", err)
 
             domria_url = self.paginate_page(domria_url)
             page_soup = BaseScrapper.create_soup_obj(domria_url)

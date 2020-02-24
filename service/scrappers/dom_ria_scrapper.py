@@ -13,7 +13,7 @@ from collections import namedtuple
 from functools import partialmethod
 import re
 
-from constants import MAXIMUM_AMOUNT_OF_PAGES_FOR_SCRAPPING
+from constants import MAXIMUM_AMOUNT_OF_PAGES_FOR_SCRAPPING, NEXT_PAGE
 
 
 class DomRiaScrapper(BaseScrapper):
@@ -124,15 +124,11 @@ class DomRiaScrapper(BaseScrapper):
         if not isinstance(scrapped_data, Tag):
             raise TypeError("type of scrapped_data should be Tag (row html markup)")
 
-        try:
-            img_src = scrapped_data.find("img")["src"]
-        except KeyError as err:
-            print("Img has no attribute src.", err)
-            img_src = scrapped_data.find("img")["data-src"]
+        img_src = scrapped_data.find("img").get("src") or scrapped_data.find("img").get("data-src")
 
         inner_link = scrapped_data.find("a", attrs={"class": re.compile(f"{self.realty_inner_link_class}.+$")})["href"]
 
-        scrapped_location = scrapped_data.find("a", attrs={"class": "blue"}).getText().strip()
+        scrapped_location = scrapped_data.find("a", attrs={"class": self.location_info_class}).getText().strip()
         scrapped_price = scrapped_data.find("b", attrs={"class": self.house_price_class}).getText()
 
         inner_content_soup = BaseScrapper.create_soup_obj(self.parse_url(inner_link))
@@ -146,7 +142,8 @@ class DomRiaScrapper(BaseScrapper):
 
         result["price"] = listing_price
         result["img"] = img_src
-        result["district"], result["street"] = listing_location.district, listing_location.street
+        result["district"] = listing_location.district
+        result["street"] = listing_location.street
         result["meta"] = structured_meta
 
         return result
@@ -165,10 +162,10 @@ class DomRiaScrapper(BaseScrapper):
                 TypeError: if current_page_url is not a string.
 
         """
-        page_index = current_page_url.find("=") + 1
+        page_index = current_page_url.find("=") + NEXT_PAGE
         current_page_number = current_page_url[page_index:]
 
-        return current_page_url.replace(current_page_number, str(int(current_page_number) + 1))
+        return current_page_url.replace(current_page_number, str(int(current_page_number) + NEXT_PAGE))
 
 
     def general_scrapp(self) -> list:
@@ -185,6 +182,7 @@ class DomRiaScrapper(BaseScrapper):
             page_soup = BaseScrapper.create_soup_obj(domria_url)
         except TypeError:
             print("Incorrect url for creating bs object.")
+            # TODO: retry logic here...
 
         for _ in range(MAXIMUM_AMOUNT_OF_PAGES_FOR_SCRAPPING):
             catalog = page_soup.find_all("section", attrs={"class": re.compile(f"{self.catalog_class}.+$")})
@@ -199,9 +197,9 @@ class DomRiaScrapper(BaseScrapper):
 
             domria_url = self.paginate_page(domria_url)
             page_soup = BaseScrapper.create_soup_obj(domria_url)
-        else:
-            print("No more pages left.")
-            return resulted_listings
+
+        print("No more pages left.")
+        return resulted_listings
 
     def __repr__(self) -> str:
         super().__repr__()

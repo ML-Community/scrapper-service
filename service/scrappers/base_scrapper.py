@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import ConnectionError
+from service.utils.retry_logic import retry
 
 
 class BaseScrapper:
@@ -20,6 +21,7 @@ class BaseScrapper:
         self.specialization = specialization
 
     @staticmethod
+    @retry(delay=1.5, error=ConnectionError(), retry_amount=5)
     def create_soup_obj(source_url: str) -> BeautifulSoup:
         """Creates BeautifulSoup object related to input url.
 
@@ -31,19 +33,16 @@ class BaseScrapper:
 
             Raises:
                 TypeError: if source_url is not a string.
+                ConnectionError: when can't open web page by url.
 
         """
         if not isinstance(source_url, str):
             raise TypeError("URL should be string.")
 
-        try:
-            page_response = requests.get(source_url).text
-            soup_obj = BeautifulSoup(page_response, features="html5lib")
+        page_response = requests.get(source_url).text
+        soup_obj = BeautifulSoup(page_response, features="html5lib")
 
-            return soup_obj
-        except ConnectionError:
-            print(f"Failed to connect to {source_url}")
-            # TODO: create retry logic
+        return soup_obj
 
     def __repr__(self) -> str:
         return f"Scrapper for {self.specialization} source."

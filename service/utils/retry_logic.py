@@ -20,7 +20,7 @@ class RetryEntity:
             self._error = new_val
 
     @property
-    def func(self):
+    def func(self) -> Callable[[Any], Any]:
         return self._func
 
     @func.setter
@@ -29,7 +29,7 @@ class RetryEntity:
             self._func = new_val
 
     @property
-    def delay(self):
+    def delay(self) -> int or float:
         return self._delay
 
     @delay.setter
@@ -38,7 +38,7 @@ class RetryEntity:
             self._delay = new_val
 
     @property
-    def retries(self):
+    def retries(self) -> int:
         return self._retries
 
     @retries.setter
@@ -46,23 +46,25 @@ class RetryEntity:
         if (0 <= new_value <= 10) and isinstance(new_value, int):
             self._retries = new_value
 
-    def decrease_retries(self):
+    def decrease_retries(self) -> None:
         self.retries -= 1
 
-    def retry_executing(self, *args: list):
-        if self.retries == 0:
-            raise Exception
+    def retry_executing(self, *args: list, **kwargs: dict):
 
-        for _ in range(self.retries):
+        while self.retries:
             try:
-                return self.func(*args)
-            except self.error:
+                return self.func(*args, **kwargs)
+            except self.error as task_err:
+                print(task_err)
+                print(f"Retry to execute function || {self.retries} ||")
                 time.sleep(self.delay)
                 self.decrease_retries()
 
+        raise self.error
+
     def __call__(self, *args, **kwargs):
         try:
-            return self.retry_executing(*args)
+            return self.retry_executing(*args, **kwargs)
         except self.error as task_err:
             print("Can't handle your function, ", task_err)
         except TypeError as err:
